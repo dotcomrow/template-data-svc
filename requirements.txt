@@ -1,0 +1,13 @@
+flask
+gunicorn
+pybase64
+google-cloud-BigQuery
+pandas
+db_dtypes
+google-cloud-logging
+google-cloud-pubsub
+google-cloud-tasks
+protobuf
+sqlalchemy
+sqlalchemy-bigquery
+google-cloud-bigquery-storage

@@ -1,2 +1,2 @@
-# template-data-layer-svc
-Template repository for python based CRUD GCP microservice 
+# map-component-data-svc
+Map component data layer
