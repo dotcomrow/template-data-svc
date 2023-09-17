@@ -11,6 +11,8 @@ import datetime
 engine = db.create_engine('bigquery://' + config.PROJECT_ID + '/' + config.DATASET_NAME, credentials_path='google.key')
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
+sequence_name = "news_item_seq"
+
 def buildResponse(result):
     out_results = []
     for r in result:
@@ -45,7 +47,7 @@ def handle_getItems(account_id, item_id):
 
 def handle_addItem(account_id):
     connection = engine.connect()
-    index = connection.execute(db.text('call ' + config.DATASET_NAME + '.get_row_id()')).scalar()
+    index = connection.execute(db.text('call ' + config.DATASET_NAME + '.get_row_id(\'' + sequence_name + '\')')).scalar()
     my_session = Session(engine)
     request_data = request.get_json()
 
