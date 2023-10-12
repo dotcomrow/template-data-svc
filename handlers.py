@@ -8,7 +8,7 @@ import orm
 import json
 import datetime
 
-engine = db.create_engine('bigquery://' + config.PROJECT_ID + '/' + config.DATASET_NAME, credentials_path='google.key')
+engine = db.create_engine('bigquery://' + config.PROJECT_ID + '/' + config.DATASET_NAME, credentials_path='/secrets/google.key')
 logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 sequence_name = "news_item_seq"

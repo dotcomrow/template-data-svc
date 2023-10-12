@@ -12,43 +12,8 @@ jobs:
         - name: Checkout code
           uses: actions/checkout@v2
 
-        - name: Find and Replace
-          uses: jacobtomlinson/gha-find-replace@v3
-          with:
-            find: "<SECRET_KEY>"
-            replace: ${{ secrets.SECRET_KEY }}
-            regex: false
-
-        - name: Find and Replace
-          uses: jacobtomlinson/gha-find-replace@v3
-          with:
-                find: "<PROJECT_ID>"
-                replace: ${{ vars.PROJECT_ID }}
-                regex: false
-
-        - name: Find and Replace
-          uses: jacobtomlinson/gha-find-replace@v3
-          with:
-                find: "<DATASET_NAME>"
-                replace: ${{ vars.DATASET_NAME }}
-                regex: false
-
         - name: get repository name
           run: echo "REPOSITORY_NAME=${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
-
-        - name: Find and Replace
-          uses: jacobtomlinson/gha-find-replace@v3
-          with:
-                find: "<REPOSITORY_NAME>"
-                replace: ${{ env.REPOSITORY_NAME }}
-                regex: false
-
-        - name: Writing Google key
-          uses: mobiledevops/secret-to-file-action@v1
-          with:
-            base64-encoded-secret: ${{ secrets.GOOGLE_CREDENTIALS }}
-            filename: "./google.key"
-            is-executable: false
 
         - id: 'auth'
           uses: 'google-github-actions/auth@v1'
@@ -66,13 +31,13 @@ jobs:
           with:
             context: .
             push: true
-            tags: gcr.io/${{ vars.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}:latest
+            tags: gcr.io/${{ secrets.COMMON_PROJECT_ID }}/${{ env.REPOSITORY_NAME }}:latest
             build-args: |
               HTTP_PORT=8080
 
-        - name: Deploy to Cloud Run
-          uses: google-github-actions/deploy-cloudrun@v1
-          with:
-            image: gcr.io/${{ vars.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}:latest
-            service: ${{ env.REPOSITORY_NAME }}
-            region: ${{ vars.REGION }}
+        # - name: Deploy to Cloud Run
+        #   uses: google-github-actions/deploy-cloudrun@v1
+        #   with:
+        #     image: gcr.io/org-service-accounts/${{ env.REPOSITORY_NAME }}:latest
+        #     service: ${{ env.REPOSITORY_NAME }}
+        #     region: ${{ vars.REGION }}
