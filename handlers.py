@@ -8,9 +8,6 @@ import orm
 import json
 import datetime
 
-engine = db.create_engine('bigquery://' + config.PROJECT_ID + '/' + config.DATASET_NAME, credentials_path='/secrets/google.key')
-logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
-
 sequence_name = "news_item_seq"
 
 def buildResponse(result):
@@ -27,6 +24,7 @@ def buildResponse(result):
     return out_results
 
 def handle_getItems(account_id, item_id):
+    engine = db.create_engine('bigquery://' + config.PROJECT_ID + '/' + config.DATASET_NAME, credentials_path='/secrets/google.key')
     my_session = Session(engine) 
     result = None
     if item_id is None:
@@ -46,6 +44,7 @@ def handle_getItems(account_id, item_id):
     return Response(response=json.dumps(out_results), status=200, mimetype="application/json")
 
 def handle_addItem(account_id):
+    engine = db.create_engine('bigquery://' + config.PROJECT_ID + '/' + config.DATASET_NAME, credentials_path='/secrets/google.key')
     connection = engine.connect()
     index = connection.execute(db.text('call ' + config.DATASET_NAME + '.get_row_id(\'' + sequence_name + '\')')).scalar()
     my_session = Session(engine)
@@ -74,6 +73,7 @@ def handle_addItem(account_id):
     return Response(response=json.dumps(out_results), status=200, mimetype="application/json")
 
 def handle_deleteItem(account_id, item_id):
+    engine = db.create_engine('bigquery://' + config.PROJECT_ID + '/' + config.DATASET_NAME, credentials_path='/secrets/google.key')
     my_session = Session(engine) 
     result = my_session.execute(
         select(orm.ItemData)
@@ -91,6 +91,7 @@ def handle_deleteItem(account_id, item_id):
     return Response(response="Record marked for deletion", status=200)
 
 def handle_updateItem(account_id, item_id):
+    engine = db.create_engine('bigquery://' + config.PROJECT_ID + '/' + config.DATASET_NAME, credentials_path='/secrets/google.key')
     my_session = Session(engine) 
     result = my_session.execute(
         select(orm.ItemData)
