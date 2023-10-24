@@ -38,6 +38,8 @@ def handle_getItems(account_id, item_id):
                 .where(orm.ItemData.account_id == account_id)
                 .where(orm.ItemData.id == int(item_id))                
             ).all()
+    my_session.commit()
+    my_session.flush()
     my_session.close()
     
     out_results = buildResponse(result) 
@@ -86,6 +88,7 @@ def handle_deleteItem(account_id, item_id):
     
     my_session.delete(result[0][0])
     my_session.commit()
+    my_session.flush()
     my_session.close()
     
     return Response(response="Record marked for deletion", status=200)
