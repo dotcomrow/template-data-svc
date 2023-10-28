@@ -8,45 +8,65 @@ import orm
 import json
 import datetime
 
-sequence_name = "news_item_seq"
+sequence_name = "lookup_code_seq"
+connect_key="/secrets/google.key"
+bigquery_url='bigquery://' + config.PROJECT_ID + '/' + config.DATASET_NAME
 
 def buildResponse(result):
     out_results = []
     for r in result:
         o = r[0].to_dict()        
-        # o['location'] = mapping(geoalchemy2.shape.to_shape(o['location']))
-        # o['last_update_datetime'] = str(o['last_update_datetime'])
-        # o['data'] = json.loads(o['data'])
-        
-        # build JSON result, above props are for conversion from DB to JSON, may not be needed
-        
+        o['last_update_datetime'] = str(o['last_update_datetime'])
         out_results.append(o)
-    return out_results
+    
+    if len(out_results) == 1:
+        return out_results[0]
+    else:
+        return out_results
 
-def handle_getItems(account_id, item_id):
-    engine = db.create_engine('bigquery://' + config.PROJECT_ID + '/' + config.DATASET_NAME, credentials_path='/secrets/google.key')
+def handle_getItems(item_id, connection_options):
+    engine = db.create_engine(bigquery_url, 
+                                credentials_path=connect_key,
+                                connect_args=connection_options,
+                                echo=True,
+                                echo_pool=True,
+                                pool_size=5,
+                                max_overflow=2,
+                                pool_timeout=30,
+                                pool_recycle=1800,
+                                pool_pre_ping=True,
+                                pool_use_lifo=True,
+                              )
     my_session = Session(engine) 
     result = None
     if item_id is None:
         result = my_session.execute(
-            select(orm.ItemData)
-                .where(orm.ItemData.account_id == account_id)         
+                select(orm.LookupCodes)
             ).all()
     else:
         result = my_session.execute(
-            select(orm.ItemData)
-                .where(orm.ItemData.account_id == account_id)
-                .where(orm.ItemData.id == int(item_id))                
-            ).all()
+            select(orm.LookupCodes)
+                .where(orm.LookupCodes.code == item_id)                
+            ).all()    
+    out_results = buildResponse(result) 
     my_session.commit()
     my_session.flush()
     my_session.close()
-    
-    out_results = buildResponse(result) 
     return Response(response=json.dumps(out_results), status=200, mimetype="application/json")
 
-def handle_addItem(account_id):
-    engine = db.create_engine('bigquery://' + config.PROJECT_ID + '/' + config.DATASET_NAME, credentials_path='/secrets/google.key')
+def handle_addItem(connection_options):
+    engine = db.create_engine(bigquery_url, 
+                                credentials_path=connect_key,
+                                connect_args=connection_options,
+                                echo=True,
+                                echo_pool=True,
+                                pool_size=5,
+                                max_overflow=2,
+                                pool_timeout=30,
+                                pool_recycle=1800,
+                                pool_pre_ping=True,
+                                pool_use_lifo=True,
+                              )
     connection = engine.connect()
     index = connection.execute(db.text('call ' + config.DATASET_NAME + '.get_row_id(\'' + sequence_name + '\')')).scalar()
     my_session = Session(engine)
@@ -54,33 +74,40 @@ def handle_addItem(account_id):
 
     try:
         request_data['id'] = index
-        # request_data['account_id'] = account_id
-        # request_data['last_update_datetime'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        # request_data['location'] = shape(request_data['location']).wkt
-        # request_data['data'] = json.dumps(request_data['data'])
-        
-        # perform any JSON to DB conversion here, above are examples
-        
-        newRec = orm.ItemData(**request_data)
+        request_data['last_update_datetime'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        newRec = orm.LookupCodes(**request_data)
         my_session.add(newRec)
         my_session.commit()
         my_session.flush()
     except Exception as e:
         logging.error(e)
     
-    result = my_session.execute(select(orm.ItemData).where(orm.ItemData.id == index)).all()
+    result = my_session.execute(select(orm.LookupCodes).where(orm.LookupCodes.id == index)).all()
+    out_results = buildResponse(result) 
+    
+    my_session.commit()
+    my_session.flush()
     my_session.close()
     
-    out_results = buildResponse(result)
     return Response(response=json.dumps(out_results), status=200, mimetype="application/json")
 
-def handle_deleteItem(account_id, item_id):
-    engine = db.create_engine('bigquery://' + config.PROJECT_ID + '/' + config.DATASET_NAME, credentials_path='/secrets/google.key')
+def handle_deleteItem(item_id, connection_options):
+    engine = db.create_engine(bigquery_url, 
+                                credentials_path=connect_key,
+                                connect_args=connection_options,
+                                echo=True,
+                                echo_pool=True,
+                                pool_size=5,
+                                max_overflow=2,
+                                pool_timeout=30,
+                                pool_recycle=1800,
+                                pool_pre_ping=True,
+                                pool_use_lifo=True,
+                              )
     my_session = Session(engine) 
     result = my_session.execute(
-        select(orm.ItemData)
-            .where(orm.ItemData.account_id == account_id)
-            .where(orm.ItemData.id == int(item_id))
+        select(orm.LookupCodes)
+            .where(orm.LookupCodes.code == item_id)
         ).all()
     
     if len(result) == 0:
@@ -93,13 +120,23 @@ def handle_deleteItem(account_id, item_id):
     
     return Response(response="Record marked for deletion", status=200)
 
-def handle_updateItem(account_id, item_id):
-    engine = db.create_engine('bigquery://' + config.PROJECT_ID + '/' + config.DATASET_NAME, credentials_path='/secrets/google.key')
+def handle_updateItem(item_id, connection_options):
+    engine = db.create_engine(bigquery_url, 
+                                credentials_path=connect_key,
+                                connect_args=connection_options,
+                                echo=True,
+                                echo_pool=True,
+                                pool_size=5,
+                                max_overflow=2,
+                                pool_timeout=30,
+                                pool_recycle=1800,
+                                pool_pre_ping=True,
+                                pool_use_lifo=True,
+                              )
     my_session = Session(engine) 
     result = my_session.execute(
-        select(orm.ItemData)
-            .where(orm.ItemData.account_id == account_id)
-            .where(orm.ItemData.id == int(item_id))
+        select(orm.LookupCodes)
+            .where(orm.LookupCodes.code == item_id)
         ).all()
     
     if len(result) == 0:
@@ -107,11 +144,8 @@ def handle_updateItem(account_id, item_id):
      
     request_data = request.get_json()
     poi_data = result[0][0]
-    # poi_data.data = json.dumps(request_data['data'])
-    # poi_data.location = shape(request_data['location']).wkt
-    # poi_data.last_update_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    # perform any JSON to DB conversion here, above are examples
+    poi_data.value = request_data['value']
+    poi_data.last_update_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     my_session.commit()
     my_session.flush()
@@ -119,10 +153,12 @@ def handle_updateItem(account_id, item_id):
     
     search_session = Session(engine) 
     search_res = search_session.execute(
-        select(orm.ItemData)
-            .where(orm.ItemData.account_id == account_id)
-            .where(orm.ItemData.id == int(item_id))
+        select(orm.LookupCodes)
+            .where(orm.LookupCodes.code == item_id)
         ).all()
     
-    out_results = buildResponse(search_res)
+    out_results = buildResponse(search_res) 
+    search_session.commit()
+    search_session.flush()
+    search_session.close()
     return Response(response=json.dumps(out_results), status=200, mimetype="application/json")
