@@ -7,6 +7,7 @@ from sqlalchemy import select
 import orm
 import json
 import datetime
+from sqlalchemy.inspection import inspect
 
 sequence_name = "lookup_code_seq"
 connect_key="/secrets/google.key"
@@ -24,10 +25,9 @@ def buildResponse(result):
     else:
         return out_results
 
-def handle_getItems(item_id, connection_options):
+def handle_getItems(item_id, return_dict):
     engine = db.create_engine(bigquery_url, 
                                 credentials_path=connect_key,
-                                connect_args=connection_options,
                                 echo=True,
                                 echo_pool=True,
                                 pool_size=5,
@@ -52,12 +52,12 @@ def handle_getItems(item_id, connection_options):
     my_session.commit()
     my_session.flush()
     my_session.close()
-    return Response(response=json.dumps(out_results), status=200, mimetype="application/json")
+    return_dict["results"]=out_results
+    return_dict["status"]=200
 
-def handle_addItem(connection_options):
+def handle_addItem(return_dict):
     engine = db.create_engine(bigquery_url, 
                                 credentials_path=connect_key,
-                                connect_args=connection_options,
                                 echo=True,
                                 echo_pool=True,
                                 pool_size=5,
@@ -89,12 +89,12 @@ def handle_addItem(connection_options):
     my_session.flush()
     my_session.close()
     
-    return Response(response=json.dumps(out_results), status=200, mimetype="application/json")
+    return_dict["results"]=out_results
+    return_dict["status"]=200
 
-def handle_deleteItem(item_id, connection_options):
+def handle_deleteItem(item_id, return_dict):
     engine = db.create_engine(bigquery_url, 
                                 credentials_path=connect_key,
-                                connect_args=connection_options,
                                 echo=True,
                                 echo_pool=True,
                                 pool_size=5,
@@ -107,23 +107,25 @@ def handle_deleteItem(item_id, connection_options):
     my_session = Session(engine) 
     result = my_session.execute(
         select(orm.LookupCodes)
-            .where(orm.LookupCodes.code == item_id)
+            .where(orm.LookupCodes.id == int(item_id))
         ).all()
     
     if len(result) == 0:
-        return Response(response="Item does not exist", status=404)
+        return_dict["results"]="Item does not exist"
+        return_dict["status"]=404
+        return
     
     my_session.delete(result[0][0])
     my_session.commit()
     my_session.flush()
     my_session.close()
     
-    return Response(response="Record marked for deletion", status=200)
+    return_dict["results"]="Item deleted"
+    return_dict["status"]=200
 
-def handle_updateItem(item_id, connection_options):
+def handle_updateItem(item_id, return_dict):
     engine = db.create_engine(bigquery_url, 
                                 credentials_path=connect_key,
-                                connect_args=connection_options,
                                 echo=True,
                                 echo_pool=True,
                                 pool_size=5,
@@ -136,14 +138,17 @@ def handle_updateItem(item_id, connection_options):
     my_session = Session(engine) 
     result = my_session.execute(
         select(orm.LookupCodes)
-            .where(orm.LookupCodes.code == item_id)
+            .where(orm.LookupCodes.id == int(item_id))
         ).all()
     
     if len(result) == 0:
-        return Response(response="Item does not exist", status=404)
+        return_dict["results"]="Item does not exist"
+        return_dict["status"]=404
+        return
      
     request_data = request.get_json()
     poi_data = result[0][0]
+    poi_data.code = request_data['code']
     poi_data.value = request_data['value']
     poi_data.last_update_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
@@ -161,4 +166,21 @@ def handle_updateItem(item_id, connection_options):
     search_session.commit()
     search_session.flush()
     search_session.close()
-    return Response(response=json.dumps(out_results), status=200, mimetype="application/json")
+    return_dict["results"]=out_results
+    return_dict["status"]=200
+    
+def isGeneratedColumn(column_name):
+    return True if column_name == "id" or column_name == "last_update_datetime" else  False
+
+def isPrimaryKey(table, column):
+    return True if column.name in [key.name for key in table.primary_key] else False;
+
+def handle_describe(return_dict):
+    return_dict["results"]=[{
+        "name" : column.name,
+        "type" : str(column.type),
+        "generated": str(isGeneratedColumn(column.name)),
+        "primary_key": str(isPrimaryKey(inspect(orm.LookupCodes), column))
+    } for column in inspect(orm.LookupCodes).c]
+    return_dict["status"]=200
+    return

@@ -1,5 +1,5 @@
 from sqlalchemy.schema import Table
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, String, Integer
 from sqlalchemy import String
 from sqlalchemy_bigquery import DATETIME
 import config
@@ -10,27 +10,21 @@ class Base():
 
 mapper_registry = registry()
 
-class ItemData():
-    __table__ = config.TABLE_NAME
+class LookupCodes():
+    __table__ = "lookup_codes"
     def to_dict(self):
         return {
-            # "id": self.id,
-            # "location": self.location,
-            # "data": self.data,
-            # "account_id": self.account_id,
-            # "last_update_datetime": self.last_update_datetime
-            
-            # Set as JSON representation of DB object
+            "id": self.id,
+            "code": self.code,
+            "value": self.value,
+            "last_update_datetime": self.last_update_datetime
         }
     
-mapper_registry.map_imperatively(ItemData, Table(
-       config.TABLE_NAME,
+mapper_registry.map_imperatively(LookupCodes, Table(
+       "lookup_codes",
         mapper_registry.metadata,
         Column("id", Integer, primary_key=True),
-        # Column("location", GEOGRAPHY),
-        # Column("data", String),
-        # Column("account_id", String),
-        # Column("last_update_datetime", DATETIME(timezone=True))
-        
-        # Add DB column definitions
+        Column("code", String),
+        Column("value", String),
+        Column("last_update_datetime", DATETIME(timezone=True))
 ))
